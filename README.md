@@ -54,16 +54,36 @@ git push -u origin main
 
 デプロイ完了後、発行されたURLでアプリにアクセスできます。
 
+## iPhoneでオフライン利用する手順
+
+本アプリはPWA（Progressive Web App）対応になっており、外部API・データベースに依存しないため、一度オンラインで開けばオフラインでも動作します。
+
+1. iPhoneのSafariで、Vercelにデプロイした**https://...**のURL（`http://localhost`は不可。HTTPS必須）を開く
+2. 画面が問題なく表示されることを確認する（この時点でアプリ本体がService Workerによりキャッシュされます）
+3. Safariの共有ボタン（□に↑のアイコン）をタップ → 「ホーム画面に追加」を選択
+4. ホーム画面に追加されたアイコンからアプリを起動する
+5. 機内モードにするなどオフライン状態にしても、アプリの起動・薬剤選択・判定結果の表示が可能であることを確認する
+
+> 初回はオンラインでアクセスしてキャッシュを作成する必要があります。オフライン状態のまま初回アクセスすることはできません。
+> また、Service Workerの仕様上iOSではキャッシュが自動的に消去される場合があるため、たまにオンラインで開き直すことを推奨します。
+
 ## ディレクトリ構成
 
 ```
 app/
-  layout.js        … メタデータ・フォント読み込み
+  layout.js        … メタデータ・フォント読み込み・PWA関連タグ
   page.js
   globals.css
 components/
   RegionalAnesthesiaTool.js  … メインのUI・状態管理（"use client"）
+  ServiceWorkerRegister.js   … Service Workerの登録（"use client"）
 lib/
   drugData.js       … 薬剤データ（静的）
   logic.js          … 休薬基準の解決・併用時の最長基準採用ロジック
+public/
+  manifest.json     … PWAマニフェスト（ホーム画面追加・アイコン設定）
+  sw.js             … オフラインキャッシュ用Service Worker
+  icons/            … アプリアイコン（192px・512px）
+scripts/
+  generate-icons.cjs … アプリアイコンPNGを生成するスクリプト
 ```

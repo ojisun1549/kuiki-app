@@ -1,4 +1,5 @@
 import "./globals.css";
+import ServiceWorkerRegister from "@/components/ServiceWorkerRegister";
 
 export const metadata = {
   title: "抗血栓薬服用患者の区域麻酔・神経ブロック 判定ツール",
@@ -16,8 +17,20 @@ export default function RootLayout({ children }) {
           href="https://fonts.googleapis.com/css2?family=Zen+Old+Mincho:wght@400;500;700&family=Noto+Sans+JP:wght@400;500;700&display=swap"
           rel="stylesheet"
         />
+
+        {/* PWA / iPhoneでのオフライン・ホーム画面追加対応 */}
+        <link rel="manifest" href="/manifest.json" />
+        <meta name="theme-color" content="#0f5f5c" />
+        <link rel="apple-touch-icon" href="/icons/icon-192.png" />
+        <meta name="apple-mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+        <meta name="apple-mobile-web-app-title" content="区域麻酔判定" />
+        <meta name="mobile-web-app-capable" content="yes" />
       </head>
-      <body>{children}</body>
+      <body>
+        <ServiceWorkerRegister />
+        {children}
+      </body>
     </html>
   );
 }
