@@ -1,0 +1,74 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+body {
+  font-family: "Noto Sans JP", sans-serif;
+  background-color: #f3f6f6;
+  color: #1c2b33;
+}
+
+.card {
+  background-color: #ffffff;
+  border: 1px solid #d9e2e2;
+  border-radius: 0.75rem;
+  padding: 1.25rem;
+}
+
+.chip {
+  border: 1px solid #c7d4d4;
+  background-color: #ffffff;
+  color: #1c2b33;
+  border-radius: 9999px;
+  padding: 0.4rem 0.9rem;
+  font-size: 0.8125rem;
+  transition: background-color 0.15s, color 0.15s, border-color 0.15s;
+}
+
+.chip-active {
+  background-color: #0f5f5c;
+  border-color: #0f5f5c;
+  color: #ffffff;
+}
+
+.pill-toggle {
+  border: 1px solid #c7d4d4;
+  background-color: #ffffff;
+  color: #1c2b33;
+  border-radius: 0.5rem;
+  padding: 0.35rem 0.75rem;
+  font-size: 0.8125rem;
+}
+
+.pill-toggle-active {
+  background-color: #b5781a;
+  border-color: #b5781a;
+  color: #ffffff;
+}
+
+.stamp {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 9999px;
+  border: 2px solid currentColor;
+  padding: 0.35rem 0.9rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.stamp-green {
+  color: #146c43;
+  background-color: #e8f5ee;
+}
+
+.stamp-amber {
+  color: #8a5a0a;
+  background-color: #fbf0dd;
+}
+
+.stamp-gray {
+  color: #5b6b6e;
+  background-color: #eef2f2;
+}
