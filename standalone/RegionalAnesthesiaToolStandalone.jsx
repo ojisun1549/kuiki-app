@@ -497,6 +497,27 @@ function washoutToHours(w) {
   return null;
 }
 
+// 休薬基準が「日単位」か「時間単位」かを判定する（日単位なら時刻入力を不要にする）
+function getWashoutUnit(w) {
+  if (!w || w.tbd) return "hour";
+  if (typeof w.days === "number") return "day";
+  return "hour";
+}
+
+function getDoseInputUnit(drug, perDrugInput) {
+  const midW = resolveMidWashout(drug, perDrugInput);
+  if (midW && !midW.tbd) return getWashoutUnit(midW);
+  const lowW = resolveLowWashout(drug, perDrugInput);
+  if (lowW && !lowW.tbd) return getWashoutUnit(lowW);
+  return "day";
+}
+
+function getRestartUnit(restart) {
+  if (!restart) return "hour";
+  if (typeof restart.days === "number") return "day";
+  return "hour";
+}
+
 function aggregateWashout(selectedDrugs, inputsById, risk) {
   if (selectedDrugs.length === 0) return { status: "none" };
 
@@ -506,7 +527,7 @@ function aggregateWashout(selectedDrugs, inputsById, risk) {
       risk === "mid"
         ? resolveMidWashout(drug, perDrugInput)
         : resolveLowWashout(drug, perDrugInput);
-    return { drug, perDrugInput, washout: w, hours: washoutToHours(w) };
+    return { drug, perDrugInput, washout: w, hours: washoutToHours(w), unit: getWashoutUnit(w) };
   });
 
   const hasTbd = resolved.some((r) => r.washout && r.washout.tbd);
@@ -531,25 +552,43 @@ function aggregateWashout(selectedDrugs, inputsById, risk) {
 
 function aggregateCatheterRestart(selectedDrugs) {
   if (selectedDrugs.length === 0) return { status: "none" };
-  const resolved = selectedDrugs.map((drug) => ({ drug, restart: drug.catheterRestart }));
+  const resolved = selectedDrugs.map((drug) => ({
+    drug,
+    restart: drug.catheterRestart,
+    unit: getRestartUnit(drug.catheterRestart),
+  }));
 
   const ambiguous = resolved.filter((r) => r.restart.hours === null);
   const numeric = resolved.filter((r) => r.restart.hours !== null);
 
   let maxHours = null;
   let rateLimiting = [];
+  let unit = "hour";
   if (numeric.length > 0) {
     maxHours = Math.max(...numeric.map((r) => r.restart.hours));
     rateLimiting = numeric.filter((r) => r.restart.hours === maxHours);
+    unit = rateLimiting.every((r) => r.unit === "day") ? "day" : "hour";
   }
 
-  return { status: "resolved", maxHours, rateLimiting, ambiguous, resolved };
+  return { status: "resolved", maxHours, rateLimiting, ambiguous, resolved, unit };
+}
+
+function parseLocalDateTime(str) {
+  if (!str) return null;
+  if (str.length === 10) {
+    const parts = str.split("-").map(Number);
+    const y = parts[0], m = parts[1], d = parts[2];
+    if (!y || !m || !d) return null;
+    return new Date(y, m - 1, d, 0, 0, 0, 0);
+  }
+  const d = new Date(str);
+  return isNaN(d.getTime()) ? null : d;
 }
 
 function addHoursToDate(dateTimeLocalStr, hours) {
   if (!dateTimeLocalStr || hours === null || hours === undefined) return null;
-  const d = new Date(dateTimeLocalStr);
-  if (isNaN(d.getTime())) return null;
+  const d = parseLocalDateTime(dateTimeLocalStr);
+  if (!d) return null;
   return new Date(d.getTime() + hours * 60 * 60 * 1000);
 }
 
@@ -561,16 +600,38 @@ function formatDateTime(date) {
   )}:${pad(date.getMinutes())}`;
 }
 
+function formatDate(date) {
+  if (!date) return "";
+  const pad = (n) => String(n).padStart(2, "0");
+  return `${date.getFullYear()}/${pad(date.getMonth() + 1)}/${pad(date.getDate())}`;
+}
+
+// 採用基準（時間）を表示用に整形する。24時間以上は日単位（＋余り時間）で表示し、わかりやすくする。
+function formatDurationHours(hours) {
+  if (hours === null || hours === undefined) return "";
+  if (hours <= 0) return "休薬不要";
+  if (hours < 24) return `${hours} 時間`;
+  const days = Math.floor(hours / 24);
+  const remainder = hours % 24;
+  return remainder === 0 ? `${days} 日` : `${days} 日 ${remainder} 時間`;
+}
+
 function computeReadyDateTime(resolved) {
   const needed = resolved.filter((r) => (r.hours || 0) > 0);
-  if (needed.length === 0) return { computable: true, readyAt: null, missing: [] };
+  if (needed.length === 0) return { computable: true, readyAt: null, missing: [], unit: "day" };
   const missing = needed.filter((r) => !(r.perDrugInput && r.perDrugInput.lastDoseTime));
   if (missing.length > 0) {
-    return { computable: false, readyAt: null, missing: missing.map((r) => r.drug.name) };
+    return {
+      computable: false,
+      readyAt: null,
+      missing: missing.map((r) => r.drug.name),
+      unit: "day",
+    };
   }
   const candidates = needed.map((r) => addHoursToDate(r.perDrugInput.lastDoseTime, r.hours));
   const readyAt = new Date(Math.max(...candidates.map((d) => d.getTime())));
-  return { computable: true, readyAt, missing: [] };
+  const unit = needed.every((r) => r.unit === "day") ? "day" : "hour";
+  return { computable: true, readyAt, missing: [], unit };
 }
 
 // ============================================================
@@ -613,6 +674,7 @@ const cardStyle = {
 };
 
 function DrugCard({ drug, input, onChangeInput }) {
+  const doseUnit = getDoseInputUnit(drug, input);
   return (
     <div style={cardStyle}>
       <h3 style={{ fontFamily: '"Zen Old Mincho", serif', fontSize: "1.125rem", color: "#1c2b33" }}>
@@ -726,10 +788,12 @@ function DrugCard({ drug, input, onChangeInput }) {
 
       <div style={{ marginTop: "0.75rem" }}>
         <label style={{ display: "block", fontSize: "0.75rem", color: "#6b7c80", marginBottom: "0.25rem" }}>
-          最終服用（投与）日時（任意）
+          {doseUnit === "day"
+            ? "最終服用（投与）日（任意・日単位の基準のため時刻は不要）"
+            : "最終服用（投与）日時（任意）"}
         </label>
         <input
-          type="datetime-local"
+          type={doseUnit === "day" ? "date" : "datetime-local"}
           value={input.lastDoseTime || ""}
           onChange={(e) => onChangeInput({ lastDoseTime: e.target.value })}
           style={{
@@ -837,9 +901,7 @@ function WashoutResultCard({ title, description, agg }) {
         <div style={{ marginTop: "0.75rem", fontSize: "0.875rem" }}>
           <p style={{ color: "#3c4d54" }}>
             採用基準:{" "}
-            <strong style={{ color: "#1c2b33" }}>
-              {agg.maxHours > 0 ? `${agg.maxHours} 時間` : "休薬不要"}
-            </strong>
+            <strong style={{ color: "#1c2b33" }}>{formatDurationHours(agg.maxHours)}</strong>
           </p>
           {agg.maxHours > 0 && (
             <p style={{ marginTop: "0.25rem", fontSize: "0.75rem", color: "#6b7c80" }}>
@@ -853,7 +915,10 @@ function WashoutResultCard({ title, description, agg }) {
               {ready.computable ? (
                 ready.readyAt ? (
                   <p style={{ color: "#0f5f5c" }}>
-                    施行可能日時（推定）: <strong>{formatDateTime(ready.readyAt)}</strong>
+                    {ready.unit === "day" ? "施行可能日（推定）" : "施行可能日時（推定）"}:{" "}
+                    <strong>
+                      {ready.unit === "day" ? formatDate(ready.readyAt) : formatDateTime(ready.readyAt)}
+                    </strong>
                   </p>
                 ) : (
                   <p style={{ color: "#0f5f5c" }}>休薬不要のため施行可能です。</p>
@@ -902,7 +967,11 @@ function CatheterRestartCard({ agg, pullTime, onChangePullTime }) {
           <p style={{ color: "#3c4d54" }}>
             採用基準:{" "}
             <strong style={{ color: "#1c2b33" }}>
-              {agg.maxHours !== null ? `抜去後 ${agg.maxHours} 時間` : "—"}
+              {agg.maxHours === null
+                ? "—"
+                : agg.maxHours === 0
+                ? "休薬の必要なし"
+                : `抜去後 ${formatDurationHours(agg.maxHours)}`}
             </strong>
           </p>
           {agg.maxHours !== null && agg.rateLimiting.length > 0 && (
@@ -928,10 +997,12 @@ function CatheterRestartCard({ agg, pullTime, onChangePullTime }) {
 
           <div style={{ marginTop: "0.75rem" }}>
             <label style={{ display: "block", fontSize: "0.75rem", color: "#6b7c80", marginBottom: "0.25rem" }}>
-              硬膜外カテーテル抜去日時（任意）
+              {agg.unit === "day"
+                ? "硬膜外カテーテル抜去日（任意・日単位の基準のため時刻は不要）"
+                : "硬膜外カテーテル抜去日時（任意）"}
             </label>
             <input
-              type="datetime-local"
+              type={agg.unit === "day" ? "date" : "datetime-local"}
               value={pullTime}
               onChange={(e) => onChangePullTime(e.target.value)}
               style={{
@@ -951,11 +1022,14 @@ function CatheterRestartCard({ agg, pullTime, onChangePullTime }) {
               {pullTime ? (
                 readyAt && (
                   <p style={{ color: "#0f5f5c" }}>
-                    再開可能日時（推定）: <strong>{formatDateTime(readyAt)}</strong>
+                    {agg.unit === "day" ? "再開可能日（推定）" : "再開可能日時（推定）"}:{" "}
+                    <strong>{agg.unit === "day" ? formatDate(readyAt) : formatDateTime(readyAt)}</strong>
                   </p>
                 )
               ) : (
-                <p style={{ color: "#3c4d54" }}>抜去日時を入力すると再開可能日時を自動計算します。</p>
+                <p style={{ color: "#3c4d54" }}>
+                  {agg.unit === "day" ? "抜去日を入力すると再開可能日を自動計算します。" : "抜去日時を入力すると再開可能日時を自動計算します。"}
+                </p>
               )}
             </div>
           )}
@@ -1205,7 +1279,7 @@ export default function App() {
                         borderColor: active ? "#0f5f5c" : "#c7d4d4",
                       }}
                     >
-                      {d.name}
+                      {d.name}（{d.brand}）
                     </button>
                   );
                 })}

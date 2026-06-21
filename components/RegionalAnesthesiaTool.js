@@ -13,6 +13,9 @@ import {
   computeReadyDateTime,
   addHoursToDate,
   formatDateTime,
+  formatDate,
+  formatDurationHours,
+  getDoseInputUnit,
 } from "@/lib/logic";
 
 function StatusStamp({ status }) {
@@ -27,6 +30,7 @@ function StatusStamp({ status }) {
 }
 
 function DrugCard({ drug, input, onChangeInput }) {
+  const doseUnit = getDoseInputUnit(drug, input);
   return (
     <div className="card">
       <div className="flex flex-wrap items-baseline justify-between gap-2">
@@ -101,10 +105,12 @@ function DrugCard({ drug, input, onChangeInput }) {
 
       <div className="mt-3">
         <label className="mb-1 block text-xs font-medium text-ink-faint">
-          最終服用（投与）日時（任意）
+          {doseUnit === "day"
+            ? "最終服用（投与）日（任意・日単位の基準のため時刻は不要）"
+            : "最終服用（投与）日時（任意）"}
         </label>
         <input
-          type="datetime-local"
+          type={doseUnit === "day" ? "date" : "datetime-local"}
           value={input.lastDoseTime || ""}
           onChange={(e) => onChangeInput({ lastDoseTime: e.target.value })}
           className="w-full rounded-md border border-line bg-white px-3 py-2 text-sm text-ink focus:border-teal-deep focus:outline-none focus:ring-1 focus:ring-teal-deep"
@@ -196,9 +202,7 @@ function WashoutResultCard({ title, description, agg, lastDoseHint }) {
         <div className="mt-3 text-sm">
           <p className="text-ink-soft">
             採用基準:{" "}
-            <strong className="text-ink">
-              {agg.maxHours > 0 ? `${agg.maxHours} 時間` : "休薬不要"}
-            </strong>
+            <strong className="text-ink">{formatDurationHours(agg.maxHours)}</strong>
           </p>
           {agg.maxHours > 0 && (
             <p className="mt-1 text-xs text-ink-faint">
@@ -213,8 +217,12 @@ function WashoutResultCard({ title, description, agg, lastDoseHint }) {
               {ready?.computable ? (
                 ready.readyAt ? (
                   <p className="text-teal-ink">
-                    施行可能日時（推定）:{" "}
-                    <strong>{formatDateTime(ready.readyAt)}</strong>
+                    {ready.unit === "day" ? "施行可能日（推定）" : "施行可能日時（推定）"}:{" "}
+                    <strong>
+                      {ready.unit === "day"
+                        ? formatDate(ready.readyAt)
+                        : formatDateTime(ready.readyAt)}
+                    </strong>
                   </p>
                 ) : (
                   <p className="text-teal-ink">休薬不要のため施行可能です。</p>
@@ -268,7 +276,11 @@ function CatheterRestartCard({ agg, pullTime, onChangePullTime }) {
           <p className="text-ink-soft">
             採用基準:{" "}
             <strong className="text-ink">
-              {agg.maxHours !== null ? `抜去後 ${agg.maxHours} 時間` : "—"}
+              {agg.maxHours === null
+                ? "—"
+                : agg.maxHours === 0
+                ? "休薬の必要なし"
+                : `抜去後 ${formatDurationHours(agg.maxHours)}`}
             </strong>
           </p>
           {agg.maxHours !== null && agg.rateLimiting.length > 0 && (
@@ -285,10 +297,12 @@ function CatheterRestartCard({ agg, pullTime, onChangePullTime }) {
 
           <div className="mt-3">
             <label className="mb-1 block text-xs font-medium text-ink-faint">
-              硬膜外カテーテル抜去日時（任意）
+              {agg.unit === "day"
+                ? "硬膜外カテーテル抜去日（任意・日単位の基準のため時刻は不要）"
+                : "硬膜外カテーテル抜去日時（任意）"}
             </label>
             <input
-              type="datetime-local"
+              type={agg.unit === "day" ? "date" : "datetime-local"}
               value={pullTime}
               onChange={(e) => onChangePullTime(e.target.value)}
               className="w-full max-w-xs rounded-md border border-line bg-white px-3 py-2 text-sm text-ink focus:border-teal-deep focus:outline-none focus:ring-1 focus:ring-teal-deep"
@@ -300,7 +314,10 @@ function CatheterRestartCard({ agg, pullTime, onChangePullTime }) {
               {pullTime ? (
                 readyAt && (
                   <p className="text-teal-ink">
-                    再開可能日時（推定）: <strong>{formatDateTime(readyAt)}</strong>
+                    {agg.unit === "day" ? "再開可能日（推定）" : "再開可能日時（推定）"}:{" "}
+                    <strong>
+                      {agg.unit === "day" ? formatDate(readyAt) : formatDateTime(readyAt)}
+                    </strong>
                   </p>
                 )
               ) : (
@@ -494,7 +511,7 @@ export default function RegionalAnesthesiaTool() {
                     selectedIds.includes(d.id) ? "chip-active" : ""
                   }`}
                 >
-                  {d.name}
+                  {d.name}（{d.brand}）
                 </button>
               ))}
               {(grouped[cat] || []).length === 0 && (
