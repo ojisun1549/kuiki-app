@@ -1,5 +1,5 @@
-import RegionalAnesthesiaTool from "@/components/RegionalAnesthesiaTool";
+import AppTabs from "@/components/AppTabs";
 
 export default function Page() {
-  return <RegionalAnesthesiaTool />;
+  return <AppTabs />;
 }
