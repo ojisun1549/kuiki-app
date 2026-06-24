@@ -5,12 +5,14 @@ import RegionalAnesthesiaTool from "@/components/RegionalAnesthesiaTool";
 import DrugDoseCalculator from "@/components/DrugDoseCalculator";
 import BloodTransfusion from "@/components/BloodTransfusion";
 import LastToxicity from "@/components/LastToxicity";
+import MalignantHyperthermia from "@/components/MalignantHyperthermia";
 
 const TABS = [
   { id: "regional", label: "区域麻酔・神経ブロック判定", Component: RegionalAnesthesiaTool },
   { id: "drugdose", label: "薬剤投与量計算", Component: DrugDoseCalculator },
   { id: "blood", label: "輸血", Component: BloodTransfusion },
   { id: "last", label: "局所麻酔薬中毒対応", Component: LastToxicity },
+  { id: "mh", label: "悪性高熱症対応", Component: MalignantHyperthermia },
 ];
 
 export default function AppTabs() {
