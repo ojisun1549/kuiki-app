@@ -8,6 +8,7 @@ import LastToxicity from "@/components/LastToxicity";
 import MalignantHyperthermia from "@/components/MalignantHyperthermia";
 import InOutBalance from "@/components/InOutBalance";
 import SteroidConverter from "@/components/SteroidConverter";
+import AnaphylaxisResponse from "@/components/AnaphylaxisResponse";
 
 const TABS = [
   { id: "regional", label: "区域麻酔判定", Component: RegionalAnesthesiaTool },
@@ -17,6 +18,7 @@ const TABS = [
   { id: "mh", label: "悪性高熱症", Component: MalignantHyperthermia },
   { id: "inout", label: "In/Out", Component: InOutBalance },
   { id: "steroid", label: "ステロイド", Component: SteroidConverter },
+  { id: "anaphylaxis", label: "アナフィラキシー", Component: AnaphylaxisResponse },
 ];
 
 export default function AppTabs() {
