@@ -9,6 +9,7 @@ import MalignantHyperthermia from "@/components/MalignantHyperthermia";
 import InOutBalance from "@/components/InOutBalance";
 import SteroidConverter from "@/components/SteroidConverter";
 import AnaphylaxisResponse from "@/components/AnaphylaxisResponse";
+import TEG6sEvaluation from "@/components/TEG6sEvaluation";
 
 const TABS = [
   { id: "regional", label: "区域麻酔判定", Component: RegionalAnesthesiaTool },
@@ -19,6 +20,7 @@ const TABS = [
   { id: "inout", label: "In/Out", Component: InOutBalance },
   { id: "steroid", label: "ステロイド", Component: SteroidConverter },
   { id: "anaphylaxis", label: "アナフィラキシー", Component: AnaphylaxisResponse },
+  { id: "teg6s", label: "TEG6s", Component: TEG6sEvaluation },
 ];
 
 export default function AppTabs() {
