@@ -57,20 +57,20 @@ function DrugCard({ drug, input, onChangeInput }) {
         </p>
       )}
 
-      {drug.specialInput === "dabigatran-renal" && (
+      {drug.specialInput === "doac-dose" && (
         <div className="mt-3">
-          <p className="mb-1 text-xs font-medium text-ink-faint">腎機能（CrCl）</p>
-          <div className="flex gap-2">
+          <p className="mb-1 text-xs font-medium text-ink-faint">投与量区分（表11）</p>
+          <div className="flex flex-wrap gap-2">
             {[
-              { key: "normal", label: "CrCl ≥ 60" },
-              { key: "low", label: "30 < CrCl < 60" },
+              { key: "low", label: drug.doseLabels?.low || "低用量" },
+              { key: "high", label: drug.doseLabels?.high || "標準・高用量" },
             ].map((opt) => (
               <button
                 key={opt.key}
                 type="button"
-                onClick={() => onChangeInput({ renal: opt.key })}
+                onClick={() => onChangeInput({ dose: opt.key })}
                 className={`pill-toggle ${
-                  (input.renal || "normal") === opt.key ? "pill-toggle-active" : ""
+                  (input.dose || "high") === opt.key ? "pill-toggle-active" : ""
                 }`}
               >
                 {opt.label}
@@ -124,8 +124,8 @@ function DrugCard({ drug, input, onChangeInput }) {
           <span className="text-ink-soft">
             {drug.specialInput === "heparin-route"
               ? drug.washoutByRoute[input.route || "iv"].display
-              : drug.specialInput === "dabigatran-renal"
-              ? drug.washoutMidByRenal[input.renal || "normal"].display
+              : drug.specialInput === "doac-dose"
+              ? drug.washoutByDose[input.dose || "high"].display
               : drug.washoutMid?.display}
           </span>
         </p>
@@ -139,7 +139,11 @@ function DrugCard({ drug, input, onChangeInput }) {
         </p>
         <p className="mt-1">
           硬膜外カテーテル抜去後再開:{" "}
-          <span className="text-ink-soft">{drug.catheterRestart.display}</span>
+          <span className="text-ink-soft">
+            {drug.specialInput === "doac-dose"
+              ? drug.catheterRestartByDose[input.dose || "high"].display
+              : drug.catheterRestart?.display}
+          </span>
         </p>
       </div>
     </div>
@@ -441,8 +445,8 @@ export default function RegionalAnesthesiaTool() {
     [selectedDrugs, inputsById]
   );
   const catheterAgg = useMemo(
-    () => aggregateCatheterRestart(selectedDrugs),
-    [selectedDrugs]
+    () => aggregateCatheterRestart(selectedDrugs, inputsById),
+    [selectedDrugs, inputsById]
   );
 
   return (
@@ -452,8 +456,8 @@ export default function RegionalAnesthesiaTool() {
           抗血栓薬服用患者の区域麻酔・神経ブロック 判定ツール
         </h1>
         <div className="mt-3 rounded-md border border-teal-deep/30 bg-teal-soft px-4 py-3 text-sm text-teal-ink">
-          出典:「抗血栓療法中の区域麻酔・神経ブロックガイドライン」日本ペインクリニック学会・日本麻酔科学会・日本区域麻酔学会
-          合同（2016年9月）表5〜7に基づく
+          出典:「抗血栓療法中の区域麻酔・神経ブロックガイドライン 改訂第2版」日本ペインクリニック学会・日本麻酔科学会・日本区域麻酔学会
+          合同（2026年）表8〜9・表11に基づく
         </div>
         <div className="mt-2 space-y-1 rounded-md border border-amber-deep/30 bg-amber-soft px-4 py-3 text-xs text-amber-ink">
           <p>
